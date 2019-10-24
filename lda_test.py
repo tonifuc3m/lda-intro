@@ -15,6 +15,7 @@ np.random.seed(400)
 
 ###### Get files ###### 
 def preprocess(text):
+    # Tokenize, remove stopwords, numbers, emtpy spaces and punctuation and lemmatize
     tokenized = []
     nlp = Spanish()
     doc = nlp(text)
@@ -30,14 +31,16 @@ def preprocess(text):
     return tokenized
 
 def load_files(path):
+    # Open a read files
     texts = []
     for root, dirs, files in os.walk(path):
          for file in files:
              texts.append(open(os.path.join(root,file), 'r').read())
     return texts
 
-# flatten texts
+
 def unlist(texts):
+    # flatten texts list
     unlisted_texts = []
     for sublist in texts:
         for item in sublist:
@@ -46,11 +49,8 @@ def unlist(texts):
 
 
 ###### Distance ######
-# Find the 10 most similar documents to document number 20 according to 
-# the topic distribution. 
-# 1.  transform the tuples (topic, proportion) for each document into arrays
-
 def get_topic_proportions(lda_model, bow_corpus, num_topics):
+    # Get, for each document, the topic proportions assigned by LDA
     topic_prop=lda_model.get_document_topics(bow=bow_corpus)
     
     proportions = np.zeros((len(topic_prop), num_topics))
@@ -66,8 +66,9 @@ def get_topic_proportions(lda_model, bow_corpus, num_topics):
     return proportions
 
 
-# 2. Euclidean distance to selected document
 def compute_distances(document_id, topic_proportions):
+    # Compute Euclidean distance based on topic proportions of each document 
+    # (probably not the best distance...)
     distances=[]
     for i in range(len(topic_proportions)):
         distance=np.linalg.norm(np.array(topic_proportions[i])-
@@ -77,10 +78,10 @@ def compute_distances(document_id, topic_proportions):
 
     
 def main():
-    ###### Get files ###### 
+    ###### Get and prepare texts ###### 
     texts = load_files('/home/antonio/data/corpora/SpaCCC/es/')
     clean_texts = [preprocess(text) for text in texts]
-    unlisted_texts = unlist(clean_texts)
+    unlisted_texts = unlist(clean_texts) # flatten nested list
 
     ###### Bag of words ######
     # Create a dictionary all texts
@@ -97,7 +98,7 @@ def main():
         if count < 7:
             print(k, v)
     
-    # # Bag of words on the dataset
+    # Bag of words on the dataset
     bow_corpus = [dictionary.doc2bow(doc) for doc in unlisted_texts]
     
     ###### LDA ######
@@ -108,6 +109,7 @@ def main():
                                              update_every=0, id2word=dictionary,
                                              passes = n_epoch)
     
+    ###### SHOW RESULTS ######
     # Print the 10 most probable words in every topic
     print('\n\nThe  10 most probable words in every topic are:')
     most_prob_word_topic=lda_20.show_topics(num_topics=20, num_words=10)
@@ -131,6 +133,7 @@ def main():
     ####### Show similar documents ########
     topic_prop = get_topic_proportions(lda_20, bow_corpus, num_topics)
     
+    # 2. Euclidean distance to selected document
     distances = compute_distances(document_num, topic_prop)
     
     indexes=sorted(range(len(distances)), key=lambda k: distances[k])
